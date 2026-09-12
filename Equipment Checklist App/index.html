@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0F5E52">
+    <title>Equipment Inspection App</title>
+    <style>
+        :root {
+            --primary-color: #0F8577;
+            --primary-dark: #0B5C51;
+            --accent-color: #F5A623;
+            --accent-dark: #D48A0F;
+            --bg-color: #F2F7F6;
+            --card-bg: #ffffff;
+            --text-color: #1F2D2B;
+            --border-color: #DCE6E4;
+            --success-color: #28a745;
+            --secondary-color: #4A6664;
+            --secondary-dark: #37504E;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(15, 94, 82, 0.1);
+            box-sizing: border-box;
+        }
+
+        h2, h3 {
+            margin-top: 0;
+            color: var(--primary-dark);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 12px;
+            text-align: center;
+            box-sizing: border-box;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--secondary-dark);
+        }
+
+        .btn:disabled {
+            background-color: #9FCAC4;
+            cursor: not-allowed;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            background-color: #fff;
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+
+        .list-item:hover {
+            background-color: #EEF6F4;
+        }
+
+        .status-badge {
+            font-size: 0.85rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background-color: #FDF0DA;
+            color: var(--accent-dark);
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .param-title {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            color: var(--text-color);
+        }
+
+        .options-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .options-group label {
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 0.95rem;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(15, 133, 119, 0.15);
+        }
+
+        /* Modal styling */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 45, 41, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal-card {
+            background: #fff;
+            padding: 24px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Home View -->
+    <div id="homeView">
+        <h2>Inspection Dashboard</h2>
+        <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">
+            User: <strong id="currentUserDisplay">Not set</strong> 
+            (<a href="#" onclick="promptForUsername()" style="color: var(--primary-color);">Change</a>)
+        </p>
+        <button class="btn" onclick="showMajorAreas()">Check Equipment</button>
+        <button class="btn btn-secondary" onclick="openSavedList()">View & Submit Saved Entries</button>
+    </div>
+
+    <!-- Major Areas View -->
+    <div id="majorAreaView" class="hidden">
+        <button class="btn btn-secondary" onclick="showHome()" style="margin-bottom: 16px;">← Back to Home</button>
+        <h3>Select Major Area</h3>
+        <div id="majorAreaList"></div>
+    </div>
+
+    <!-- Equipment List View -->
+    <div id="equipmentListView" class="hidden">
+        <button class="btn btn-secondary" onclick="showMajorAreas()" style="margin-bottom: 16px;">← Back to Areas</button>
+        <h3 id="selectedAreaTitle">Equipment List</h3>
+        <div id="equipmentList"></div>
+    </div>
+
+    <!-- Inspection Form View -->
+    <div id="formView" class="hidden">
+        <button class="btn btn-secondary" onclick="showEquipmentList()" style="margin-bottom: 16px;">← Back to Equipment</button>
+        <h3 id="selectedEquipmentTitle">Parameter Form</h3>
+        <form id="equipmentForm" onsubmit="handleFormSave(event)">
+            <div id="formFields"></div>
+            <button type="submit" class="btn">Save Inspection Form</button>
+        </form>
+    </div>
+
+    <!-- Saved Submissions View -->
+    <div id="savedSubmissionsView" class="hidden">
+        <button class="btn btn-secondary" onclick="showHome()" style="margin-bottom: 16px;">← Back to Home</button>
+        <h3>Saved Inspections</h3>
+        <div id="savedEquipmentList"></div>
+        <button id="finalSubmitBtn" class="btn" onclick="confirmFinalSubmission()" style="margin-top: 16px;">Confirm & Finalize Submission</button>
+    </div>
+</div>
+
+<!-- Username Modal Dialog -->
+<div id="usernameModal" class="modal-overlay hidden">
+    <div class="modal-card">
+        <h3 style="margin-top: 0; font-size: 1.2rem; color: #333;">Enter Your Name</h3>
+        <p style="font-size: 0.9rem; color: #666; margin-bottom: 16px;">This name will be attached to all inspection records submitted from this device.</p>
+        <input type="text" id="modalUsernameInput" placeholder="Full Name or Staff ID" style="margin-bottom: 16px;">
+        <button class="btn" onclick="saveUserNameFromModal()">Save & Continue</button>
+    </div>
+</div>
+
+<script>
+    // ⚠️ REPLACE THIS WITH YOUR DEPLOYED APPSCRIPT WEB APP URL
+    const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoVxzAvRYvEh98YiHF4UscHpj-5UlxYOUcIVdyd30VZpsWomrW-tcldE5sHB4LDCoZ/exec";
+
+    const majorAreas = {
+        "FGC System": ["FGC Area", "FGC-A", "FGC-B", "FGC-C", "UAT", "SUT"],
+
+        "GT & Auxiliaries": ["GTB", "GT Seal Oil System", "GT Control Oil System", "GT Lube Oil System", "GT Control Package A", "GT Control Package B", "Casing Cooling and TCA"],
+
+        "HRSG System": ["HRSG System", "CPH System", "BFP-A", "BFP-B", "Deaerator Pump", "HP Bypass HPU", "Diverter Damper", "H2 Generator and Compressor", "Sampling System Room", "Air Compressor A", "Air Compressor B", "Air Compressor C", "Air Dryer and Receiver"],
+
+        "ST Building": ["CCWP and HEX", "CEP A", "CEP B", "Vacuum and Waterbox", "ST GCB and GSC", "ST LOP and JOP", "ST COP and Valves", "Steam Turbine", "IP/LP Bypass HPU"],
+
+        "CT & CWP Area": ["EDG", "CWP A", "CWP B", "CWP C", "ACWP A", "ACWP B", "Cond Make Up Pump", "CT Make Up Pump", "Service Water Pump", "Jockey pump", "Electric Motor Fire Pump", "Diesel Engine Fire Pump", "Blow Down Pump", "FF Sump Pump"],
+
+        "CT Fans": ["CT Fan 1", "CT Fan 2", "CT Fan 3", "CT Fan 4", "CT Fan 5", "CT Fan 6", "CT Fan 7", "CT Fan 8", "CT Fan 9", "CT Fan 10", "CT Fan 11", "CT Fan 12"],
+
+        "Breaker Currents": ["6.6 KV Current", "Essential Switchboard", "GT Auxiliary", "CT Electric Building"],
+        
+        "WTP": ["HRSG and CT Dosing Pump", "River Water Lifting Pump", "Well Water supply Pump", "Well Water Transfer Pump", "Activated Carbon and Sand Filter", "Potable Water Pump", "Clarifier System", "Clarified Water Pump", "Multi Media Filter", "Multi Media Blower", "RO Feed Pump", "1St RO High Pressure Pump", "2nd  RO High Pressure Pump", "EDI Feed Pump", "Degasifier Blower Fan", "A Polymar Dosing Pump", "Alum Dosing Pump", "Hypo Dosing Pump", "Final Disposal Pump"]
+    };
+
+    const equipmentData = equipment_data = {
+    "FGC Area": [
+        "ESDV  Position_Opened_Closed_Traveling",
+        "ESDV Vent Valve Position_Closed_Opened_Traveling",
+        "Supply Line_OK_Cracked_Gas Leakage",
+        "Filter Separator Running_A_B",
+        "Drain and Vent Valve condition_Closed_Opened_Traveling",
+        "Leakage Check_No Leakage_Air_Water_Oil_Gas",
+        "FF System at GBC Area_Ready_Not Ready",
+        "Sump Pump Check_Normal_ High Temperature_High Noise_High Vibration",
+        "Fuel Gas Supply System Alarm Check_No Alarm_Alarm Exists",
+        "Fuel Gas Supply System Container AC Condition_Cooling_Not Cooling_Tripped",
+        "FGC Control Package AC Condition_Cooling_Not Cooling_Tripped",
+        "N2 Generator Pressure",
+        "N2 Generator Purity",
+        "Running N2 Generator Valve Condition_Opened_Closed_Traveling",
+        "FGC System Alarm Check_No Alarm_Alarm Exists",
+        "Any Other Abnormalities~text"
+    ],
+    "FGC-A": [
+        "Space Heater_Off_ON",
+        "Noise_Normal_Abnormal",
+        "Vibration_Normal_Abnormal",
+        "Suction Strainer DP",
+        "Suction Isolation Valve Condition_Remote_Local",
+        "Lube Oil Level_Normal_Above Normal_Below Normal",
+        "Lube Oil Filter OnLine_A_B",
+        "Oil Mist Fan Inlet Pressure",
+        "Oil Mist Fan Outlet Pressure",
+        "Auxiliary Lube Oil Pump Pressure",
+        "Aux. Lube Oil Pump Condition_Normal_Abnormal",
+        "Lube  Oil Temperature",
+        "Cooler (Inlet/Outlet) Valve Condition_Opened_Closed_Traveling",
+        "Seal Leakage Line_Hot_Cold",
+        "Cooler Flow Check Through Sight Glass_Normal_Bubble_Abnormal",
+        "Any Other Abnormalities~text"
+    ],
+    "FGC-B": [
+        "Space Heater_Off_ON",
+        "Noise_Normal_Abnormal",
+        "Vibration_Normal_Abnormal",
+        "Suction Strainer DP",
+        "Suction Isolation Valve Condition_Remote_Local",
+        "Lube Oil Level_Normal_Above Normal_Below Normal",
+        "Lube Oil Filter OnLine_A_B",
+        "Oil Mist Fan Inlet Pressure",
+        "Oil Mist Fan Outlet Pressure",
+        "Auxiliary Lube Oil Pump Pressure",
+        "Aux. Lube Oil Pump Condition_Normal_Abnormal",
+        "Lube  Oil Temperature",
+        "Cooler (Inlet/Outlet) Valve Condition_Opened_Closed_Traveling",
+        "Seal Leakage Line_Hot_Cold",
+        "Cooler Flow Check Through Sight Glass_Normal_Bubble_Abnormal",
+        "Any Other Abnormalities~text"
+    ],
+    "FGC-C": [
+        "Space Heater_Off_ON",
+        "Noise_Normal_Abnormal",
+        "Vibration_Normal_Abnormal",
+        "Suction Strainer DP",
+        "Suction Isolation Valve Condition_Remote_Local",
+        "Lube Oil Level_Normal_Above Normal_Below Normal",
+        "Lube Oil Filter OnLine_A_B",
+        "Oil Mist Fan Inlet Pressure",
+        "Oil Mist Fan Outlet Pressure",
+        "Auxiliary Lube Oil Pump Pressure",
+        "Aux. Lube Oil Pump Condition_Normal_Abnormal",
+        "Lube  Oil Temperature",
+        "Cooler (Inlet/Outlet) Valve Condition_Opened_Closed_Traveling",
+        "Seal Leakage Line_Hot_Cold",
+        "Cooler Flow Check Through Sight Glass_Normal_Bubble_Abnormal",
+        "Any Other Abnormalities~text"
+    ],
+    "UAT": [
+        "Oil Temperature",
+        "Winding Temperature",
+        "Fan and Pump Breaker_Normal_Tripped",
+        "Number of Fan Running",
+        "Transformer FF System Check_Ready_Not Ready",
+        "Leakage Check_No Leakage_Water_Oil",
+        "Any Other Abnormalities~text"
+    ],
+    "SUT": [
+        "Oil Temperature",
+        "Winding Temperature",
+        "Fan and Pump Breaker_Normal_Tripped",
+        "Number of Fan Running",
+        "Fan and Motor Condition_Normal_ High Temperature_High Noise_High Vibration",
+        "Leakage Check_No Leakage_Water_Oil",
+        "SUT Oil Pump_Running_Stopped_Tripped",
+        "SUT Oil Pump Condition_Normal_ High Temperature_High Noise_High Vibration",
+        "Standby Oil Pump Breaker Condition_Remote and Ready_Local_Opened",
+        "Sump Pump Check_Normal_ High Temperature_High Noise_High Vibration",
+        "Any Other Abnormalities~text"
+    ],
+    "GTB": [
+        "GTB FF System (Water) Check_Ready_Not Ready",
+        "CO2 System Pilot System_Unlocked_Locked",
+        "FF Mechanical/Electrical Valve Position_Opened_Closed_Traveling",
+        "FF Alarm Check_No Alarm_Alarm Exists",
+        "AC Condition on SFC Room_Cooling_Not Cooling_Tripped",
+        "SFC's Alarm_No Alarm_Alarm Existss",
+        "GCB Alarm_No Alarm_Alarm Existss",
+        "IPB System_Normal_Abnormal",
+        "IPB Pressure",
+        "Roof Damper Check_Closed_Opened_Traveling",
+        "Exhaust Fan Check_Running_Tripped",
+        "Sump Pump Check_Normal_ High Temperature_High Noise_High Vibration",
+        "Any Other Abnormalities~text"
+    ],
+    "GT Seal Oil System": [
+        "Seal Oil Pump Running_A_B_E",
+        "Seal Oil Pump Discharge Pressure",
+        "Seal Oil Pump_Normal_ High Temp_High Noise_High Vibration",
+        "Seal Oil Motor_Normal_ High Temp_High Noise_High Vibration",
+        "Seal Oil Level_Normal_Above Normal_Below Normal",
+        "Seal Oil Temperature",
+        "Vacuum Pump_Normal_ High Temp_High Noise_High Vibration",
+        "Vacuum Motor_Normal_ High Temp_High Noise_High Vibration",
+        "Vacuum Tank Pressure",
+        "Vacuum Pump Oil Level_Normal_Above Normal_Below Normal",
+        "Vacuum Tank Separator Drain_Drained_Normal",
+        "CCW Line Leakage_No Leakage_Little Leakage_High Leakage",
+        "Seal Oil Panel Alarm_No Alarm_Alarm Exists",
+        "Seal Oil Drain Vent Valves Position_Closed_Opened_Traveling",
+        "Loop Seal Tank Vapour Extractor Pressure",
+        "Loop Seal Tank Vapour Extractor_Normal_ High Temp_High Noise_High Vibration",
+        "Standby SOP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "GT Control Oil System": [
+        "COP Running_A_B",
+        "Control Oil Pump_Normal_ High Temp_High Noise_High Vibration",
+        "Control Oil Motor_Normal_ High Temp_High Noise_High Vibration",
+        "Control Oil Pump Discharge Pressure",
+        "Control Oil Level",
+        "Control Oil Temperature",
+        "Control Oil Cooling System_Opened_Closed_Traveling",
+        "Control Oil Cleaning Unit Check_Running_Stopped",
+        "Control Oil Cleaning Unit Hour",
+        "Control Oil Cleaning Unit KV",
+        "Control Oil Cleaning Unit Current",
+        "Any Leakage in System_No Leakage_Oil_Water",
+        "Standby COP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "GT Lube Oil System": [
+        "Lube Oil Tank Level_Normal_Above Normal_Below Normal",
+        "LOP Running_A_B_E",
+        "Pump Discharge Pressure",
+        "Lube Oil Pump_Normal_ High Temp_High Noise_High Vibration",
+        "Lube Oil Motor_Normal_ High Temp_High Noise_High Vibration",
+        "Lube Oil Filter DP",
+        "Oil Leakage_No Leakage_Little Leakage_High Leakage",
+        "Oil Temperature",
+        "Lube Oil Cooling System_AB Running_A Running_B Running",
+        "Bearing Oil Leakage_No Leakage_Bearing 1 Leakage_Bearing 2 Leakage_Bearing 3 Leakage_Bearing 4 Leakage_Bearing 5 Leakage",
+        "Bearing Return Flow Check_Normal_Bubble_Discolored_Discolor",
+        "GT Turning Gear Oil Level_Normal_Above Normal_Below Normal",
+        "Oil Mist Vapour Extractor Running_A_B",
+        "Oil Mist Vapour Extractor_Normal_ High Temp_High Noise_High Vibration",
+        "Valve Position_Normal_Abnormal",
+        "Mist Separator DP",
+        "Leakage_No Leakage_Little Leakage_High Leakage",
+        "Standby LOP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "GT Control Package A": [
+        "AC Condition_Cooling_Not Cooling_Tripped",
+        "All Breaker Condition_Normal_Abnormal",
+        "Fire Fighting Alarm Check_No Alarm_Alarm Exists",
+        "Any Other Abnormalities~text"
+    ],
+    "GT Control Package B": [
+        "ELOP Breaker_Remote and Auto_Local_Manual",
+        "ESOP Breaker_Remote and Auto_Local_Manual",
+        "Relay/AVR Alarm Check_No Alarm_Alarm Exists",
+        "Package B AC Condition_Cooling_Not Cooling_Tripped",
+        "Battery Room AC Condition_Cooling_Not Cooling_Tripped",
+        "Battery Water_Normal_Low_Bubble_Low with Bubble",
+        "Battery (A/B) Alarm_No Alarm_Alarm Exists",
+        "Battery (A/B) Voltage",
+        "Battery (A/B) Current",
+        "Abnormal Noise or Smell_Normal_Abnormal Noise_Abnormal Smell",
+        "Battery (A) Charger output Voltage",
+        "Battery (A) Charger output  Current",
+        "Battery (B) Charger output Voltage",
+        "Battery (B) Charger output  Current",
+        "Any Other Abnormalities~text"
+    ],
+    "Casing Cooling and TCA": [
+        "TCA Fan Belt Condition_Normal_Torn_Displaced",
+        "TCA Fan_Normal_High Noise_High Vibration",
+        "TCA Fan Motor_Normal_ High Temp_High Noise_High Vibration",
+        "TCA Drain Valves Condition_Closed_Opened_Traveling",
+        "Casing Cooling Fan Status_Stopped_Running",
+        "Casing Cooling Fan Condition_Normal_ High Temperature_High Noise_High Vibration",
+        "Casing Cooling Fan Inlet Filter_Clean_Dirty",
+        "Shut Off Valve Condition_Auto Closed_Manually Open_Auto Open",
+        "Supply Valve Condition_Auto Closed_Manually Open_Auto Open",
+        "Any Other Abnormalities~text"
+    ],
+    "HRSG System": [
+        "All Manual Drain Valve Position_Closed_Opened_Traveling",
+        "IBDs Isolation Valve Position_Opened_Closed_Traveling",
+        "CPH Relief to BD Tank Valve_Opened_Closed_Traveling",
+        "BD TCV Isolation Valve_Opened_Closed_Traveling",
+        "Main Stack Damper Positioner_Normal_Abnormal",
+        "Flue Gas Leakage Location~text",
+        "Other Leakage_No Leakage_Steam_Water_Chemical_Oil",
+        "Other Leakage Location (Steam/Water)~text",
+        "Sump Pump Check_Normal_ High Temperature_High Noise_High Vibration",
+        "HP Feed Water LCV Isolation Valve_Opened_Closed_Traveling",
+        "IP Feed Water LCV Isolation Valve_Opened_Closed_Traveling",
+        "LP Feed Water LCV Isolation Valve_Opened_Closed_Traveling",
+        "Air Leakage Location~text",
+        "Any Other Abnormalities~text"
+    ],
+    "CPH System": [
+        "CPH Recirculation Pump Running_A_B",
+        "CPH Pump Suction/Discharge Valve_Opened_Closed_Traveling",
+        "CCW Line (Inlet Outlet Valve)_Opened_Closed_Traveling",
+        "CPHP Suction Pressure",
+        "CPHP Discharge Pressure",
+        "CCW Line (Suction Pressure)",
+        "CCW Line (Discharge Pressure)",
+        "CPH Motor_Normal_ High Temperature_High Noise_High Vibration",
+        "CPH Pump_Normal_ High Temperature_High Noise_High Vibration",
+        "CPH Oil Level_Normal_Above Normal_Below Normal",
+        "Any Leakage_No Leakage_Water_Oil_Steam",
+        "Standby CPHP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "BFP-A": [
+        "Running Lube Oil Pump_A_B",
+        "Lube Oil Pump Discharge Pressure",
+        "Lube Oil Pump Oil Flow Check_Normal_Abnormal",
+        "Lube Oil Pump Oil Color_Normal_Abnormal",
+        "Lube Oil Tank Level_No Leakage_Little Leakage_High Leakage",
+        "Lube Oil Pump Selection Condition Check_Normal_Abnormal",
+        "Driving Non-Driving End Temperature_Normal_High",
+        "Cooling Water Line Valve_Opened_Closed_Traveling",
+        "Any Leakage_No Leakage_No Leakage_Water_Steam_Oil",
+        "BFP Motor_Normal_ High Temperature_High Noise_High Vibration",
+        "BFP Pump_Normal_ High Temperature_High Noise_High Vibration",
+        "Cooling Fan_Normal_ High Temperature_High Noise_High Vibration",
+        "Standby Pump Space Heater_ON_Off",
+        "Standby BFP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "BFP-B": [
+        "Running Lube Oil Pump_A_B",
+        "Lube Oil Pump Discharge Pressure",
+        "Lube Oil Pump Oil Flow Check_Normal_Abnormal",
+        "Lube Oil Pump Oil Color_Normal_Abnormal",
+        "Lube Oil Tank Level_No Leakage_Little Leakage_High Leakage",
+        "Lube Oil Pump Selection Condition Check_Normal_Abnormal",
+        "Driving Non-Driving End Temperature_Normal_High",
+        "Cooling Water Line Valve_Opened_Closed_Traveling",
+        "Any Leakage_No Leakage_No Leakage_Water_Steam_Oil",
+        "BFP Motor_Normal_ High Temperature_High Noise_High Vibration",
+        "BFP Pump_Normal_ High Temperature_High Noise_High Vibration",
+        "Cooling Fan_Normal_ High Temperature_High Noise_High Vibration",
+        "Standby Pump Space Heater_ON_Off",
+        "Standby BFP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "Deaerator Pump": [
+        "Deaerator Pump Running_Off_ON",
+        "Deaerator Motor_Normal_ High Temperature_High Noise_High Vibration",
+        "Deaerator Pump_Normal_ High Temperature_High Noise_High Vibration",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Space Heater_ON_Off",
+        "Any Leakage_No Leakage_No Leakage_Water_Steam_Oil",
+        "Deaerator Pump Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "HP Bypass HPU": [
+        "Pump Running_A_B",
+        "Motor_Normal_ High Temperature_High Noise_High Vibration",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Oil Temperature",
+        "Loading Time",
+        "Unloading Time",
+        "Loading Pressure",
+        "Unloading Pressure",
+        "Radiator Fan and Filter_Clean_Dirty",
+        "Oil Leakage_No Leakage_Little Leakage_High Leakage",
+        "Breaker Position_Normal_Abnormal",
+        "Alarm Check_No Alarm_Alarm Exists",
+        "Any Other Abnormalities~text"
+    ],
+    "Diverter Damper": [
+        "Seal Air Fan Running_A_B",
+        "Seal Air Filter Condition_Clean_Dirty",
+        "Seal Air Fan Motor_Normal_ High Temperature_High Noise_High Vibration",
+        "DD Seal Air Discharge Pressure",
+        "DD HPU Pump Selection_A_B",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Oil Temperature",
+        "Oil Leakage_No Leakage_Little Leakage_High Leakage",
+        "Alarm Check_No Alarm_Alarm Exists",
+        "DD Package AC_Cooling_Not Cooling_Tripped",
+        "Standby Seal Air Fan Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Standby HPU Pump Condition_Breaker Abnormal_Auto and Ready_Valve Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "H2 Generator and Compressor": [
+        "H2 Compressor Cooling Line_Normal_Abnormal",
+        "H2 Compressor Oil Level_Normal_Above Normal_Below Normal",
+        "H2 Generator Electrolyte Level_Normal_Above Normal_Below Normal",
+        "Any Leakage_No Leakage_Water_Oil_Electrolyte",
+        "Cooling Water Level_Normal_Above Normal_Below Normal",
+        "Generator Temperature",
+        "Current",
+        "DM Water Level_Normal_Above Normal_Below Normal",
+        "N2 Supply System_Normal_Abnormal",
+        "H2 Supply Pressure",
+        "H2 Supply Flow",
+        "All Valve Position_Normal_Abnormal",
+        "AC Condition_Cooling_Not Cooling_Tripped",
+        "Radiator Fan CleanLiness_Clean_Dirty",
+        "H2 or N2 Leakage_No Leakage_H2 Leakage_N2 Leakage",
+        "Any Other Abnormalities~text"
+    ],
+    "Sampling System Room": [
+        "AC Condition_Cooling_Not Cooling_Tripped",
+        "Running Chiller Unit_A_B",
+        "Main Pump Check_Normal_High Temperature_High Noise_High Vibration",
+        "Water Level_Normal_Above Normal_Below Normal",
+        "Pump Leakage_No Leakage_Little Leakage_High Leakage",
+        "Compressor Pressure",
+        "Chiller Unit Temperature",
+        "Any Other Abnormalities~text"
+    ],
+    "Air Compressor A": [
+        "Air Trap_Water Draining_No Draining_Air Draining",
+        "Cooling Line Valve_Opened_Closed_Traveling",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Water Leakage_No Leakage_Little Leakage_High Leakage",
+        "Washable Filter_Clean_Dirty",
+        "Suction Filter_Clean_Dirty",
+        "Motor Current",
+        "1st Stage Suction Pressure",
+        "2nd Stage Suction Pressure",
+        "2nd Stage Discharge Pressure",
+        "Oil Pressure",
+        "1st Stage Discharge Air Temperature",
+        "2nd Stage Suction Temperature",
+        "2nd Stage Discharge Temperature",
+        "Oil Supply Temperature",
+        "Motor Bearing Temperature Front",
+        "Motor Bearing Temperature Rear",
+        "Recent Alarms_No Alarm_Alarm Exists",
+        "Standby IAC Condition_Auto and Ready_Breaker Abnormal_Valve Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "Air Compressor B": [
+        "Air Trap_Water Draining_No Draining_Air Draining",
+        "Cooling Line Valve_Opened_Closed_Traveling",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Water Leakage_No Leakage_Little Leakage_High Leakage",
+        "Washable Filter_Clean_Dirty",
+        "Suction Filter_Clean_Dirty",
+        "Motor Current",
+        "1st Stage Suction Pressure",
+        "2nd Stage Suction Pressure",
+        "2nd Stage Discharge Pressure",
+        "Oil Pressure",
+        "1st Stage Discharge Air Temperature",
+        "2nd Stage Suction Temperature",
+        "2nd Stage Discharge Temperature",
+        "Oil Supply Temperature",
+        "Motor Bearing Temperature Front",
+        "Motor Bearing Temperature Rear",
+        "Recent Alarms_No Alarm_Alarm Exists",
+        "Standby IAC Condition_Auto and Ready_Breaker Abnormal_Valve Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "Air Compressor C": [
+        "Air Trap_Water Draining_No Draining_Air Draining",
+        "Cooling Line Valve_Opened_Closed_Traveling",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Water Leakage_No Leakage_Little Leakage_High Leakage",
+        "Washable Filter_Clean_Dirty",
+        "Suction Filter_Clean_Dirty",
+        "Motor Current",
+        "1st Stage Suction Pressure",
+        "2nd Stage Suction Pressure",
+        "2nd Stage Discharge Pressure",
+        "Oil Pressure",
+        "1st Stage Discharge Air Temperature",
+        "2nd Stage Suction Temperature",
+        "2nd Stage Discharge Temperature",
+        "Oil Supply Temperature",
+        "Motor Bearing Temperature Front",
+        "Motor Bearing Temperature Rear",
+        "Recent Alarms_No Alarm_Alarm Exists",
+        "Standby IAC Condition_Auto and Ready_Breaker Abnormal_Valve Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "Air Dryer and Receiver": [
+        "Running Dryer_A_B",
+        "Running Column_A_B",
+        "Air Temperature Column A",
+        "Air Temperature Column B",
+        "Pre-Filter DP",
+        "After-Filter DP",
+        "Dryer Valve Condition_Normal_Abnormal",
+        "Standby Dryer Valve Condition_Normal_Abnormal",
+        "Drain Pre Filter_Drained_Not Drained",
+        "Drain After filter_Drained_Not Drained",
+        "Drain Air receiver_Drained_Not Drained",
+        "Any Other Abnormalities~text"
+    ],
+    "CCWP and HEX": [
+        "STB FF System Check_Ready_Not Ready",
+        "Running CCWP_A_B",
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Suction Pressure",
+        "Discharge Pressure",
+        "Gland Leakage_Normal_High_Low_No Leakage_No Leakage",
+        "Running Heat Exchanger_A_B",
+        "ACW Line Inlet Pressure",
+        "ACW Line Outlet Pressure",
+        "Water leakage_No Leakage_Little Leakage_High Leakage",
+        "Standby Pump Space Heater_ON_Off",
+        "Standby CCWP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "CEP A": [
+        "Cond Make Up LCV Isolation Valve_Opened_Closed_Traveling",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Suction Strainer DP",
+        "Cooling Water Pressure",
+        "Suction Pressure",
+        "Discharge Pressure",
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Pump Vent Valve_Opened_Closed_Traveling",
+        "Standby CEP Space Heater_ON_Off",
+        "Standby CEP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "CEP B": [
+        "Cond Make Up LCV Isolation Valve_Opened_Closed_Traveling",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Suction Strainer DP",
+        "Cooling Water Pressure",
+        "Suction Pressure",
+        "Discharge Pressure",
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Pump Vent Valve_Opened_Closed_Traveling",
+        "Standby CEP Space Heater_ON_Off",
+        "Standby CEP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "Vacuum and Waterbox": [
+        "Waterbox DP A",
+        "Waterbox DP B",
+        "Vacuum Breaker Valve Drain_Normal_High_Low_No Leakage",
+        "Running Cond Vacuum Pump_A_B",
+        "Demi Make Up Valve Position_Closed_Opened_Traveling",
+        "Separator Level_Normal_Above Normal_Below Normal",
+        "Suction Pressure",
+        "Heat Exchanger Temperature",
+        "Heat Exchanger Valve Position_Opened_Closed_Traveling",
+        "Pump Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Gland Leakage_Normal_High_Low_No Leakage_No Leakage",
+        "Standby Pump Space Heater_ON_Off",
+        "Standby Vacuum Pump Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "ST Area Sump Pump Check_Normal_ High Temperature_High Noise_High Vibration",
+        "All MOV LCV PCV TCV Check_Normal_Abnormal",
+        "Any Other Abnormalities~text"
+    ],
+    "ST GCB and GSC": [
+        "Check ST IPB Panel_Normal_Abnormal",
+        "ST IPB Pressure",
+        "Generator CB Alarm_No Alarm_Alarm Exists",
+        "Generator CCW Check_Opened_Closed_Traveling",
+        "Running GSC Fan_A_B",
+        "Valve Position_Normal_Abnormal",
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Steam Inlet Pressure",
+        "Loop Seal Valve Position",
+        "Loop Seal Water Drain_Normal_High_Low_No Leakage",
+        "Water or Steam Leakage_No Leakage_Little Leakage_High Leakage",
+        "Standby Fan Valve Position_Opened_Closed_Traveling",
+        "Any Other Abnormalities~text"
+    ],
+    "ST LOP and JOP": [
+        "Running Pump_A_B_E",
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Discharge Pressure",
+        "Oil Filter DP",
+        "Tank Level_Normal_Above Normal_Below Normal",
+        "Oil Temp",
+        "CCW Line Valve Condition_Opened_Closed_Traveling",
+        "Any Leakage in System_No Leakage_Oil_Water",
+        "Running Vapour Extractor_A_B",
+        "Vapour Extractor Condition_Normal_ High Temperature_High Noise_High Vibration",
+        "Running JOP_A_B",
+        "JOP Condition_Normal_ High Temperature_High Noise_High Vibration",
+        "Discharge Pressure",
+        "Standby LOP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Standby JOP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "ST COP and Valves": [
+        "Running Pump_A_B",
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Discharge Pressure",
+        "Tank Level_Normal_Above Normal_Below Normal",
+        "Radiator Fan Air Flow Check_Normal_Low",
+        "Radiator Cleanliness Check_Clean_Dirty",
+        "Standby COP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Oil Leakage Check_No Leakage_Little Leakage_High Leakage",
+        "Oil Leakage Check at ASV ACV_No Leakage_Little Leakage_High Leakage",
+        "Oil Leakage Check at MSV MCV_No Leakage_Little Leakage_High Leakage",
+        "Oil Leakage Check at RSV ICV_No Leakage_Little Leakage_High Leakage",
+        "Check all MOV LCV PCV TCV_Normal_Abnormal",
+        "Any Other Abnormalities~text"
+    ],
+    "Steam Turbine": [
+        "CCW Head Tank LCV Check_Normal_Abnormal",
+        "Turning Motor Check_Normal_Abnormal",
+        "Shaft Position",
+        "HIP Casing Position",
+        "HIP Rotor Position",
+        "LP Rotor Position",
+        "Bearing Return Oil Check_Normal_Bubble_Discolored_Discolor",
+        "Lube Oil Leakage Check_No Leakage_Bearing 1 Leakage_Bearing 2 Leakage_Bearing 3 Leakage_Bearing 4 Leakage_Bearing 5 Leakage",
+        "Steam Leakage Check_No Leakage_Little Leakage_High Leakage",
+        "Noise_Normal_Abnormal",
+        "Vibration_Normal_Abnormal",
+        "Aux steam PCV Check_Normal_Abnormal",
+        "Roof Damper Check_Closed_Opened_Traveling",
+        "Exhaust Fan Check_Running_Tripped",
+        "Any Other Abnormalities~text"
+    ],
+    "IP/LP Bypass HPU": [
+        "Pump Running_A_B",
+        "Motor_Normal_ High Temperature_High Noise_High Vibration",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Oil Temperature",
+        "Loading Time",
+        "Unloading Time",
+        "Loading Pressure",
+        "Unloading Pressure",
+        "Radiator Fan and Filter_Clean_Dirty",
+        "Oil Leakage_No Leakage_Little Leakage_High Leakage",
+        "Breaker Position_Normal_Abnormal",
+        "Alarm Check_No Alarm_Alarm Exists",
+        "Any Other Abnormalities~text"
+    ],
+    "EDG": [
+        "Generator Control Knob Position_Auto and Ready_Test",
+        "AC Check_Cooling_Not Cooling_Tripped",
+        "Panel Moisture Check_Normal_Abnormal",
+        "Alarm Check_No Alarm_Alarm Exists",
+        "DC Voltage",
+        "Battery Check_Normal_Abnormal",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Fuel Level",
+        "Water Level_Normal_Above Normal_Below Normal",
+        "Any Other Abnormalities~text"
+    ],
+    "CWP A": [
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Discharge Pressure",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Seal and Lube Filter DP",
+        "Service Water Valve_Opened_Closed_Traveling",
+        "Gland Leakage_Normal_High_Low_No Leakage_No Leakage",
+        "NRV Oil Level_Normal_Above Normal_Below Normal",
+        "NRV Oil Temperature",
+        "NRV Oil Pressure",
+        "NRV Pump Selection_A_B",
+        "NRV Pump Vibration_Normal_Abnormal",
+        "Standby CWP Space Heater_ON_Off",
+        "Standby CWP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "CWP B": [
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Discharge Pressure",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Seal and Lube Filter DP",
+        "Service Water Valve_Opened_Closed_Traveling",
+        "Gland Leakage_Normal_High_Low_No Leakage_No Leakage",
+        "NRV Oil Level_Normal_Above Normal_Below Normal",
+        "NRV Oil Temperature",
+        "NRV Oil Pressure",
+        "NRV Pump Selection_A_B",
+        "NRV Pump Vibration_Normal_Abnormal",
+        "Standby CWP Space Heater_ON_Off",
+        "Standby CWP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "CWP C": [
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Discharge Pressure",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Seal and Lube Filter DP",
+        "Service Water Valve_Opened_Closed_Traveling",
+        "Gland Leakage_Normal_High_Low_No Leakage_No Leakage",
+        "NRV Oil Level_Normal_Above Normal_Below Normal",
+        "NRV Oil Temperature",
+        "NRV Oil Pressure",
+        "NRV Pump Selection_A_B",
+        "NRV Pump Vibration_Normal_Abnormal",
+        "Standby CWP Space Heater_ON_Off",
+        "Standby CWP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "ACWP A": [
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Discharge Pressure",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Service Water Valve_Opened_Closed_Traveling",
+        "Service Water Flow Check_Normal_Abnormal",
+        "Gland Leakage_Normal_High_Low_No Leakage_No Leakage",
+        "CT Basin Level_Normal_Above Normal_Below Normal",
+        "Standby Pump Space Heater_ON_Off",
+        "Standby ACWP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "ACWP B": [
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Discharge Pressure",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Service Water Valve_Opened_Closed_Traveling",
+        "Service Water Flow Check_Normal_Abnormal",
+        "Gland Leakage_Normal_High_Low_No Leakage_No Leakage",
+        "CT Basin Level_Normal_Above Normal_Below Normal",
+        "Standby Pump Space Heater_ON_Off",
+        "Standby ACWP Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "Cond Make Up Pump": [
+        "Running Pump_A_B",
+        "Standby Breaker Position_Remote and Auto_Local_Manual",
+        "Standby Valve Position_Opened_Closed_Traveling", "Gland Leakage_Normal_High_Low_No Leakage",
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal", "Suction Pressure",
+        "Discharge Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "CT Make Up Pump": [
+        "Running Pump_A_B",
+        "Standby Breaker Position_Remote and Auto_Local_Manual",
+        "Standby Valve Position_Opened_Closed_Traveling", "Gland Leakage_Normal_High_Low_No Leakage",
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal", "Suction Pressure",
+        "Discharge Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "Service Water Pump": [
+        "Running Pump_A_B",
+        "Standby Breaker Position_Remote and Auto_Local_Manual",
+        "Standby Valve Position_Opened_Closed_Traveling", "Gland Leakage_Normal_High_Low_No Leakage",
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal", "Suction Pressure",
+        "Discharge Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "Jockey pump": [
+        "Breaker Condition_Remote and Auto_Local_Manual", "Inlet Outlet Valve Position_Opened_Closed_Traveling",
+        "Gland Leakage_Normal_High_Low_No Leakage", "Pressure Switch_Normal_Isolated_Faulty",
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal", "Suction Pressure",
+        "Discharge Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "Electric Motor Fire Pump": [
+        "Breaker Condition_Remote and Auto_Local_Manual", "Voltage",
+        "Current",
+        "Inlet Outlet Valve Position_Opened_Closed_Traveling",
+        "Gland Leakage_Normal_High_Low_No Leakage", 
+        "Pressure Switch_Normal_Isolated_Faulty",
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal", "Suction Pressure",
+        "Discharge Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "Diesel Engine Fire Pump": [
+        "Battery Voltage", "Selection Knob_Auto_Off_Manual", 
+        "Fuel Level_Normal_Above Normal_Below Normal",
+        "Cooling Water Level_Normal_Above Normal_Below Normal", "Engine Oil Level_Normal_Above Normal_Below Normal", "Inlet Outlet Valve Position_Opened_Closed_Traveling",
+        "Gland Leakage_Normal_High_Low_No Leakage", "Pressure Switch_Normal_Isolated_Faulty", "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal", "Suction Pressure",
+        "Discharge Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "Blow Down Pump": [
+        "Running Pump_A_B",
+        "Breaker Condition_Remote and Auto_Local_Manual", "Inlet Outlet Valve Position_Opened_Closed_Traveling",
+        "Gland Leakage_Normal_High_Low_No Leakage",
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Discharge Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "FF Sump Pump": [
+        "Running Pump_A_B",
+        "Breaker Condition_Remote and Auto_Local_Manual", "Inlet Outlet Valve Position_Opened_Closed_Traveling",
+        "Gland Leakage_Normal_High_Low_No Leakage",
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Discharge Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "CT Fan 1": [
+        "Current", "Frequency", "Space Heater_ON_Off", "Breaker Condition_Remote and Auto_Local_Manual", "Alarm Check_No Alarm_Alarm Exists", "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal", "Vibration_Normal_Abnormal", "Noise_Normal_Abnormal"
+    ],
+    "CT Fan 2": [
+        "Current", "Frequency", "Space Heater_ON_Off", "Breaker Condition_Remote and Auto_Local_Manual", "Alarm Check_No Alarm_Alarm Exists", "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal", "Vibration_Normal_Abnormal", "Noise_Normal_Abnormal"
+    ],
+    "CT Fan 3": [
+        "Current", "Frequency", "Space Heater_ON_Off", "Breaker Condition_Remote and Auto_Local_Manual", "Alarm Check_No Alarm_Alarm Exists", "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal", "Vibration_Normal_Abnormal", "Noise_Normal_Abnormal"
+    ],
+    "CT Fan 4": [
+        "Current", "Frequency", "Space Heater_ON_Off", "Breaker Condition_Remote and Auto_Local_Manual", "Alarm Check_No Alarm_Alarm Exists", "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal", "Vibration_Normal_Abnormal", "Noise_Normal_Abnormal"
+    ],
+    "CT Fan 5": [
+        "Current", "Frequency", "Space Heater_ON_Off", "Breaker Condition_Remote and Auto_Local_Manual", "Alarm Check_No Alarm_Alarm Exists", "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal", "Vibration_Normal_Abnormal", "Noise_Normal_Abnormal"
+    ],
+    "CT Fan 6": [
+        "Current", "Frequency", "Space Heater_ON_Off", "Breaker Condition_Remote and Auto_Local_Manual", "Alarm Check_No Alarm_Alarm Exists", "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal", "Vibration_Normal_Abnormal", "Noise_Normal_Abnormal"
+    ],
+    "CT Fan 7": [
+        "Current", "Frequency", "Space Heater_ON_Off", "Breaker Condition_Remote and Auto_Local_Manual", "Alarm Check_No Alarm_Alarm Exists", "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal", "Vibration_Normal_Abnormal", "Noise_Normal_Abnormal"
+    ],
+    "CT Fan 8": [
+        "Current", "Frequency", "Space Heater_ON_Off", "Breaker Condition_Remote and Auto_Local_Manual", "Alarm Check_No Alarm_Alarm Exists", "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal", "Vibration_Normal_Abnormal", "Noise_Normal_Abnormal"
+    ],
+    "CT Fan 9": [
+        "Current", "Frequency", "Space Heater_ON_Off", "Breaker Condition_Remote and Auto_Local_Manual", "Alarm Check_No Alarm_Alarm Exists", "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal", "Vibration_Normal_Abnormal", "Noise_Normal_Abnormal"
+    ],
+    "CT Fan 10": [
+        "Current", "Frequency", "Space Heater_ON_Off", "Breaker Condition_Remote and Auto_Local_Manual", "Alarm Check_No Alarm_Alarm Exists", "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal", "Vibration_Normal_Abnormal", "Noise_Normal_Abnormal"
+    ],
+    "CT Fan 11": [
+        "Current", "Frequency", "Space Heater_ON_Off", "Breaker Condition_Remote and Auto_Local_Manual", "Alarm Check_No Alarm_Alarm Exists", "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal", "Vibration_Normal_Abnormal", "Noise_Normal_Abnormal"
+    ],
+    "CT Fan 12": [
+        "Current", "Frequency", "Space Heater_ON_Off", "Breaker Condition_Remote and Auto_Local_Manual", "Alarm Check_No Alarm_Alarm Exists", "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal", "Vibration_Normal_Abnormal", "Noise_Normal_Abnormal"
+    ],
+    "6.6 KV Current": [
+        "ACWP B", "ACWP A", "CWP C", "CWP B", "CWP A", "BFP B", "BFP A", "TR 5", "CCWP B", "CCWP A", "CEP B", "CEP A", "TR 4", "TR 3", "TR 2", "TR 1", "FGC C",
+        "FGC B", "FGC A"
+    ],
+    "Essential Switchboard": [
+        "ST Turning Device", "Main Oil Vapour Extractor A", "Cond Make Up Pump A", "Main Oil Pump B",
+        "Jacking Oil Pump B", "Main Oil Vapour Extractor B", "Main Oil Pump A", "Jacking Oil Pump A",
+        "Cond Vacuum Pump A", "Cond Vacuum Pump B", "Gland Steam Cond Fan A", "Gland Steam Cond Fan B",
+        "Control Oil Pump A", "Control Oil Pump B", "Cond Vacuum Recirculation Pump A", "Cond Vacuum Recirculation Pump B",
+        "Control Oil Radiator Fan", "CPH Recirculation Pump A", "CPH Recirculation Pump B"
+    ],
+    "GT Auxiliary": [
+        "GT Package Vent A", "GT Package Vent B", "GT Package Vent C", "Lube Oil Vapour Extractor A",
+        "Lube Oil Vapour Extractor B", "Seal Oil Pump A",
+        "Seal Oil Pump B", "Turning Motor", "Seal Oil Vacuum Pump",
+        "Seal Oil Vapour Extractor", "Casing Cooling Fan", "Main Lube Oil Pump A",
+        "Main Lube Oil Pump B", "Control Oil Pump A", "Control Oil Pump B", "TCA Fan A",
+        "TCA Fan B", "TCA Fan C"
+    ],
+    "CT Electric Building": [
+        "Cond Make Up Pump B", "CT BD Pump A", "CT BD Pump B", "Service Water Pump A",
+        "Service Water Pump B", "CT Make Up Pump A", "CT Make Up Pump B"
+    ],
+    "River Water Lifting Pump": [
+        "Running Pump_A_B",
+        "Current",
+        "Standby Pump Space Heater_ON_Off",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Service Water Valve_Opened_Closed_Traveling",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Water Level of River",
+        "Standby Pump Space Heater_ON_Off",
+        "Standby Lifting Pump Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "Well Water supply Pump": [
+        "Running Pump_A_B",
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Water Flow",
+        "Standby Pump Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "Well Water Transfer Pump": [
+        "Running Pump_A_B",
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Standby Pump Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "Activated Carbon and Sand Filter": [
+        "Valve Position_Normal_Abnormal",
+        "Any Other Abnormalities~text"
+    ],
+    "Potable Water Pump": [
+        "Running Pump_A_B",
+        "Current",
+        "Standby Breaker Position_Remote and Auto_Local_Manual",
+        "Standby Valve Position_Opened_Closed_Traveling",
+        "Gland Leakage_Normal_High_Low_No Leakage",
+        "Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Temperature_Normal_Abnormal",
+        "Suction Pressure",
+        "Discharge Pressure",
+        "Standby Pump Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "Clarifier System": [
+        "Total Flow",
+        "Valve Position_Normal_Abnormal",
+        "Related Dosing_Normal Dosing_Dosing Problem",
+        "Any Other Abnormalities~text"
+    ],
+    "Clarified Water Pump": [
+        "Running Pump_A_B",
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Water Flow",
+        "Standby Pump Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "Multi Media Filter": [
+        "Valve Position_Normal_Abnormal",
+        "Any Other Abnormalities~text"
+    ],
+    "Multi Media Blower": [
+        "Running Pump_A_B",
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Standby Blower Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "RO Feed Pump A": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "RO Feed Pump B": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "RO Feed Pump C": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "1St RO High Pressure Pump A": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "1St RO High Pressure Pump B": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "1St RO High Pressure Pump C": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "2nd  RO High Pressure Pump A": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "2nd  RO High Pressure Pump B": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "2nd  RO High Pressure Pump C": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "EDI Feed Pump A": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "EDI Feed Pump B": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "EDI Feed Pump C": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Any Other Abnormalities~text"
+    ],
+    "EDI Unit A": [
+        "Module 1 Transformer Condition_Normal_Abnormal_Red Hot_Burning Smell",
+        "Module 2 Transformer Condition_Normal_Abnormal_Red Hot_Burning Smell",
+        "Module 1 Inlet Outlet Valves_Opened_Closed",
+        "Module 2 Inlet Outlet Valves_Opened_Closed",
+        "Module 1 Current",
+        "Module 2 Current",
+        "Module 1 Inlet Pressure",
+        "Module 2 Outlet Pressure",
+        "Module 1 Flow",
+        "Module 2 Flow",
+        "Module 1 Concentric Inlet Pressure",
+        "Module 2 Concentric Outlet Pressure",
+        "Module 1 Concentric Flow",
+        "Module 2 Concentric Flow",
+        "Any Other Abnormalities~text"
+    ],
+    "EDI Unit B": [
+        "Module 1 Transformer Condition_Normal_Abnormal_Red Hot_Burning Smell",
+        "Module 2 Transformer Condition_Normal_Abnormal_Red Hot_Burning Smell",
+        "Module 1 Inlet Outlet Valves_Opened_Closed",
+        "Module 2 Inlet Outlet Valves_Opened_Closed",
+        "Module 1 Current",
+        "Module 2 Current",
+        "Module 1 Inlet Pressure",
+        "Module 2 Outlet Pressure",
+        "Module 1 Flow",
+        "Module 2 Flow",
+        "Module 1 Concentric Inlet Pressure",
+        "Module 2 Concentric Outlet Pressure",
+        "Module 1 Concentric Flow",
+        "Module 2 Concentric Flow",
+        "Any Other Abnormalities~text"
+    ],
+    "EDI Unit C": [
+        "Module 1 Transformer Condition_Normal_Abnormal_Red Hot_Burning Smell",
+        "Module 2 Transformer Condition_Normal_Abnormal_Red Hot_Burning Smell",
+        "Module 1 Inlet Outlet Valves_Opened_Closed",
+        "Module 2 Inlet Outlet Valves_Opened_Closed",
+        "Module 1 Current",
+        "Module 2 Current",
+        "Module 1 Inlet Pressure",
+        "Module 2 Outlet Pressure",
+        "Module 1 Flow",
+        "Module 2 Flow",
+        "Module 1 Concentric Inlet Pressure",
+        "Module 2 Concentric Outlet Pressure",
+        "Module 1 Concentric Flow",
+        "Module 2 Concentric Flow",
+        "Any Other Abnormalities~text"
+    ],
+    "Degasifier Blower Fan": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Standby Blower Condition_Auto and Ready_Valve Abnormal_Breaker Abnormal_Isolated",
+        "Any Other Abnormalities~text"
+    ],
+    "A Polymar Dosing Pump A": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Dosing Volume",
+        "Any Other Abnormalities~text"
+    ],
+    "A Polymar Dosing Pump B": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Dosing Volume",
+        "Any Other Abnormalities~text"
+    ],
+    "A Polymar Dosing Pump C": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Dosing Volume",
+        "Any Other Abnormalities~text"
+    ],
+    "Alum Dosing Pump A": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Dosing Volume",
+        "Any Other Abnormalities~text"
+    ],
+    "Alum Dosing Pump B": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Dosing Volume",
+        "Any Other Abnormalities~text"
+    ],
+    "Alum Dosing Pump C": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Dosing Volume",
+        "Any Other Abnormalities~text"
+    ],
+    "Alum Dosing Pump D": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Dosing Volume",
+        "Any Other Abnormalities~text"
+    ],
+    "Hypo Dosing Pump": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Dosing Volume",
+        "Any Other Abnormalities~text"
+    ],
+    "Final Disposal Pump": [
+        "Current",
+        "Breaker Condition_Remote and Auto_Local_Manual",
+        "Oil Level_Normal_Above Normal_Below Normal",
+        "Motor Temperature_Normal_Abnormal",
+        "Motor Vibration_Normal_Abnormal",
+        "Noise_Normal_Abnormal",
+        "Pump Pressure",
+        "Water Flow",
+        "Any Other Abnormalities~text"
+    ],
+    "HRSG and CT Dosing Pump": [
+        "HRSG Chemical Dosing Shelter Pumps Oil Level_Normal_Above Normal_Below Normal",
+        "HRSG Chemical Pumps Valve Check_Opened_Closed_Traveling",
+        "HRSG Chemical Pumps Breaker Check_Remote and Auto_Local_Manual",
+        "HRSG Chemical Leakage Check_No Leakage_Little Leakage_High Leakage",
+        "HRSG Dosing Check_Normal_No Dosing",
+        "HRSG Dosing Pump Condition_Normal_ High Temperature_High Noise_High Vibration",
+        "HRSG Dosing Tank Level_Normal_Above Normal_Below Normal",
+        "CT Chemical Dosing Shelter Pumps Oil Level_Normal_Above Normal_Below Normal",
+        "CT Chemical Pumps Valve Check_Opened_Closed_Traveling",
+        "CT Chemical Pumps Breaker Check_Remote and Auto_Local_Manual",
+        "CT Chemical Leakage Check_No Leakage_Little Leakage_High Leakage",
+        "CT Dosing Check_Normal_No Dosing",
+        "CT Dosing Pump Condition_Normal_ High Temperature_High Noise_High Vibration",
+        "CT Dosing Tank Level_Normal_Above Normal_Below Normal",
+        "Any Other Abnormalities~text"
+    ],
+    "HRSG Sampling System": [
+        "AC Condition_Cooling_Not Cooling_Tripped",
+        "Check All Resin Column_Normal_Exhausted",
+        "Sample Flow Check_Normal_Lower",
+        "Any Leakage_No Leakage_Water Leakage_Steam Leakage",
+        "Smell Check_Normal_Abnormal Smell",
+        "Any Other Abnormalities~text"
+    ]
+};
+
+    let currentArea = null;
+    let currentSelectedEquipment = null;
+    let pendingSubmission = false;
+
+    // --- User Name Functions ---
+    function getStoredUsername() {
+        return localStorage.getItem('app_user_name');
+    }
+
+    function updateUsernameDisplay() {
+        const username = getStoredUsername();
+        document.getElementById('currentUserDisplay').innerText = username ? username : "Not set";
+    }
+
+    function promptForUsername() {
+        const currentName = getStoredUsername() || '';
+        document.getElementById('modalUsernameInput').value = currentName;
+        document.getElementById('usernameModal').classList.remove('hidden');
+        document.getElementById('modalUsernameInput').focus();
+    }
+
+    function saveUserNameFromModal() {
+        const inputVal = document.getElementById('modalUsernameInput').value.trim();
+        if (!inputVal) {
+            alert('Please enter a valid name.');
+            return;
+        }
+        localStorage.setItem('app_user_name', inputVal);
+        document.getElementById('usernameModal').classList.add('hidden');
+        updateUsernameDisplay();
+
+        if (pendingSubmission) {
+            pendingSubmission = false;
+            executeSubmissionProcess();
+        }
+    }
+
+    // --- View Navigation ---
+    function hideAllViews() {
+        document.getElementById('homeView').classList.add('hidden');
+        document.getElementById('majorAreaView').classList.add('hidden');
+        document.getElementById('equipmentListView').classList.add('hidden');
+        document.getElementById('formView').classList.add('hidden');
+        document.getElementById('savedSubmissionsView').classList.add('hidden');
+    }
+
+    function showHome() {
+        hideAllViews();
+        updateUsernameDisplay();
+        document.getElementById('homeView').classList.remove('hidden');
+    }
+
+    function showMajorAreas() {
+        hideAllViews();
+        const areaList = document.getElementById('majorAreaList');
+        areaList.innerHTML = '';
+
+        Object.keys(majorAreas).forEach(areaName => {
+            const item = document.createElement('div');
+            item.className = 'list-item';
+            
+            const eqList = majorAreas[areaName];
+            const savedCount = eqList.filter(eq => localStorage.getItem(eq) !== null).length;
+            
+            item.innerHTML = `
+                <span>${areaName}</span>
+                <span class="status-badge">${savedCount}/${eqList.length} Checked</span>
+            `;
+            item.onclick = () => showEquipmentList(areaName);
+            areaList.appendChild(item);
+        });
+
+        document.getElementById('majorAreaView').classList.remove('hidden');
+    }
+
+    function showEquipmentList(areaName) {
+        if (areaName) currentArea = areaName;
+        hideAllViews();
+
+        document.getElementById('selectedAreaTitle').innerText = `${currentArea} Equipment List`;
+        const listContainer = document.getElementById('equipmentList');
+        listContainer.innerHTML = '';
+
+        const equipments = majorAreas[currentArea] || [];
+        equipments.forEach(eqName => {
+            const item = document.createElement('div');
+            item.className = 'list-item';
+            
+            const isSaved = localStorage.getItem(eqName) !== null;
+            const badgeText = isSaved ? 'Saved' : 'Not Saved';
+
+            item.innerHTML = `
+                <span>${eqName}</span>
+                <span class="status-badge">${badgeText}</span>
+            `;
+
+            item.onclick = () => openEquipmentForm(eqName);
+            listContainer.appendChild(item);
+        });
+
+        document.getElementById('equipmentListView').classList.remove('hidden');
+    }
+
+    function openEquipmentForm(eqName) {
+        currentSelectedEquipment = eqName;
+        hideAllViews();
+
+        const title = document.getElementById('selectedEquipmentTitle');
+        const fieldsContainer = document.getElementById('formFields');
+
+        title.innerText = eqName + " Parameters";
+        fieldsContainer.innerHTML = '';
+
+        const savedData = JSON.parse(localStorage.getItem(eqName) || '{}');
+        const parameters = equipmentData[eqName] || [];
+
+        parameters.forEach((paramStr) => {
+            const formGroup = document.createElement('div');
+            formGroup.className = 'form-group';
+
+            const parts = paramStr.split('_');
+            const paramName = parts[0].trim();
+            const options = parts.slice(1);
+
+            const titleLabel = document.createElement('label');
+            titleLabel.className = 'param-title';
+            titleLabel.innerText = paramName;
+            formGroup.appendChild(titleLabel);
+
+            const savedValue = savedData[paramName];
+
+            if (options.length > 0 && !paramStr.includes('~text')) {
+                const optionsGroup = document.createElement('div');
+                optionsGroup.className = 'options-group';
+
+                options.forEach((opt, optIdx) => {
+                    const cleanOpt = opt.trim();
+                    const optLabel = document.createElement('label');
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = paramName;
+                    radio.value = cleanOpt;
+                    
+                    if (savedValue ? savedValue === cleanOpt : optIdx === 0) {
+                        radio.checked = true;
+                    }
+
+                    optLabel.appendChild(radio);
+                    optLabel.appendChild(document.createTextNode(' ' + cleanOpt));
+                    optionsGroup.appendChild(optLabel);
+                });
+                formGroup.appendChild(optionsGroup);
+            } else if (paramStr.includes('~text')) {
+                const textInput = document.createElement('input');
+                textInput.type = 'text';
+                textInput.name = paramName;
+                textInput.value = savedValue || '';
+                textInput.placeholder = 'Enter details...';
+                formGroup.appendChild(textInput);
+            } else {
+                const numInput = document.createElement('input');
+                numInput.type = 'number';
+                numInput.step = 'any';
+                numInput.name = paramName;
+                numInput.value = savedValue !== undefined ? savedValue : '';
+                numInput.placeholder = 'Enter value';
+                formGroup.appendChild(numInput);
+            }
+
+            fieldsContainer.appendChild(formGroup);
+        });
+
+        document.getElementById('formView').classList.remove('hidden');
+    }
+
+    function handleFormSave(event) {
+        event.preventDefault();
+        if (!currentSelectedEquipment) return;
+
+        const formData = new FormData(event.target);
+        const savedObject = {
+            savedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+
+        for (let [key, value] of formData.entries()) {
+            savedObject[key] = value;
+        }
+
+        localStorage.setItem(currentSelectedEquipment, JSON.stringify(savedObject));
+        alert(`Data for "${currentSelectedEquipment}" saved locally!`);
+        showEquipmentList();
+    }
+
+    function openSavedList() {
+        hideAllViews();
+        const container = document.getElementById('savedEquipmentList');
+        const submitBtn = document.getElementById('finalSubmitBtn');
+        container.innerHTML = '';
+
+        const allKeys = Object.keys(equipmentData);
+        let savedCount = 0;
+
+        allKeys.forEach(eqKey => {
+            const rawData = localStorage.getItem(eqKey);
+            if (rawData) {
+                savedCount++;
+                const data = JSON.parse(rawData);
+
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                item.style.cursor = 'default';
+
+                item.innerHTML = `
+                    <span>${eqKey}</span>
+                    <span class="status-badge">Checked at ${data.savedAt || 'Saved'}</span>
+                `;
+                container.appendChild(item);
+            }
+        });
+
+        if (savedCount === 0) {
+            container.innerHTML = `<p style="text-align: center; color: #888; font-style: italic;">No equipment inspection data saved yet. Please click "Check Equipment" to fill forms first.</p>`;
+            submitBtn.style.display = 'none';
+        } else {
+            submitBtn.style.display = 'block';
+        }
+
+        document.getElementById('savedSubmissionsView').classList.remove('hidden');
+    }
+
+    // --- Submission Processing ---
+    function confirmFinalSubmission() {
+        const username = getStoredUsername();
+        if (!username) {
+            pendingSubmission = true;
+            promptForUsername();
+            return;
+        }
+        executeSubmissionProcess();
+    }
+
+    async function executeSubmissionProcess() {
+        const username = getStoredUsername();
+        const allKeys = Object.keys(equipmentData);
+        const submitBtn = document.getElementById('finalSubmitBtn');
+        const savedEquipments = [];
+
+        allKeys.forEach(eqKey => {
+            const item = localStorage.getItem(eqKey);
+            if (item) {
+                savedEquipments.push({
+                    sheetName: eqKey,
+                    dataObj: JSON.parse(item)
+                });
+            }
+        });
+
+        if (savedEquipments.length === 0) {
+            alert('No saved data to submit.');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Submitting Data...";
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const eq of savedEquipments) {
+            const valuesArray = [];
+            for (const [key, val] of Object.entries(eq.dataObj)) {
+                if (key !== 'savedAt') {
+                    valuesArray.push(val);
+                }
+            }
+
+            const payload = {
+                act: 'addData',
+                sheetName: eq.sheetName,
+                username: username,
+                data: valuesArray
+            };
+
+            try {
+                const response = await fetch(APPSCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const responseText = await response.text();
+
+                if (responseText.trim() === "Successful") {
+                    localStorage.removeItem(eq.sheetName);
+                    successCount++;
+                } else {
+                    console.error(`Apps Script Error for ${eq.sheetName}:`, responseText);
+                    alert(`Server returned error for "${eq.sheetName}": ${responseText}`);
+                    failCount++;
+                }
+            } catch (err) {
+                console.error(`Network Error submitting ${eq.sheetName}:`, err);
+                alert(`Network error submitting "${eq.sheetName}". Please check connection.`);
+                failCount++;
+            }
+        }
+
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Confirm & Finalize Submission";
+
+        if (failCount === 0) {
+            alert(`Success! All ${successCount} equipment record(s) uploaded successfully.`);
+        } else {
+            alert(`Process completed: ${successCount} uploaded successfully, ${failCount} failed.`);
+        }
+
+        showHome();
+    }
+
+    window.onload = function() {
+        showHome();
+    };
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+      .then(() => console.log('Service Worker Registered'))
+      .catch(err => console.error('Service Worker Error:', err));
+  }
+</script>
+</body>
+</html>
