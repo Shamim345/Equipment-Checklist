@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0F5E52">
-    <title>Equipment Inspection App</title>
+    <title>Equipment Checklist App</title>
     <style>
         :root {
             --primary-color: #0F8577;
@@ -28,41 +28,56 @@
             margin: 0;
             padding: 16px;
             display: flex;
-            justify-content: center;
+            justify-content: flex-start;
+            flex-direction: column;
+            align-items: center;
         }
 
         .container {
             width: 100%;
+            height: 100%;
             max-width: 600px;
             background: var(--card-bg);
-            padding: 20px;
+            padding: 50px;
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(15, 94, 82, 0.1);
+            box-shadow: 0 4px 12px rgba(15, 94, 82, 0.2);
             box-sizing: border-box;
         }
-
+        #homeView{
+            margin-top: 40px;
+            height: 65vh;
+        }
         h2, h3 {
             margin-top: 0;
             color: var(--primary-dark);
         }
-
+        h1 {
+            margin-top: 10;
+            font-size: 26px;
+            color: var(--primary-dark);
+        }
         .hidden {
             display: none !important;
         }
 
         .btn {
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             width: 100%;
-            padding: 12px;
+            min-height: 48px;
+            padding: 12px 36px;
             background-color: var(--primary-color);
             color: white;
             border: none;
             border-radius: 6px;
-            font-size: 1rem;
+            font-size: 1.25rem;
             font-weight: bold;
             cursor: pointer;
-            margin-bottom: 12px;
+            margin-bottom: 24px;
+            margin-top: 34px;
             text-align: center;
+            line-height: 1.3;
             box-sizing: border-box;
             transition: background-color 0.2s;
         }
@@ -175,6 +190,53 @@
             max-width: 400px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
+        .app-footer {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(6px);
+            box-shadow: 0 -2px 10px rgba(15, 94, 82, 0.12);
+            box-sizing: border-box;
+            z-index: 500;
+        }
+
+        .app-footer button {
+            flex: 0 1 auto;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 20px;
+            background-color: #EAF3F1;
+            color: var(--primary-dark);
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .app-footer button:hover {
+            background-color: #D8ECE8;
+        }
+
+        body {
+            padding-bottom: 72px;
+        }
+        .instructions-list {
+            text-align: left;
+            font-size: 0.85rem;
+            color: var(--text-color);
+            line-height: 1.6;
+            padding-left: 20px;
+            margin: 0 0 16px 0;
+        }
+        .instructions-list li {
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
@@ -182,7 +244,7 @@
 <div class="container">
     <!-- Home View -->
     <div id="homeView">
-        <h2>Inspection Dashboard</h2>
+        <h1>Equipment Checklist</h1>
         <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">
             User: <strong id="currentUserDisplay">Not set</strong> 
             (<a href="#" onclick="promptForUsername()" style="color: var(--primary-color);">Change</a>)
@@ -194,8 +256,12 @@
     <!-- Major Areas View -->
     <div id="majorAreaView" class="hidden">
         <button class="btn btn-secondary" onclick="showHome()" style="margin-bottom: 16px;">← Back to Home</button>
-        <h3>Select Major Area</h3>
-        <div id="majorAreaList"></div>
+        <input type="text" id="globalSearchInput" placeholder="Search equipment across all areas..." oninput="handleGlobalSearch()" style="margin-bottom: 16px;">
+        <div id="globalSearchResults" class="hidden"></div>
+        <div id="majorAreaSection">
+            <h3>Select Major Area</h3>
+            <div id="majorAreaList"></div>
+        </div>
     </div>
 
     <!-- Equipment List View -->
@@ -223,7 +289,17 @@
         <button id="finalSubmitBtn" class="btn" onclick="confirmFinalSubmission()" style="margin-top: 16px;">Confirm & Finalize Submission</button>
     </div>
 </div>
-
+<footer class="app-footer">
+    <button type="button" onclick="showInstructions()">
+    Instructions
+</button>
+    <button type="button" onclick="showInfo()">
+    Info
+</button>
+    <button type="button" onclick="showCredits()">
+    Credits
+</button>
+</footer>
 <!-- Username Modal Dialog -->
 <div id="usernameModal" class="modal-overlay hidden">
     <div class="modal-card">
@@ -231,6 +307,50 @@
         <p style="font-size: 0.9rem; color: #666; margin-bottom: 16px;">This name will be attached to all inspection records submitted from this device.</p>
         <input type="text" id="modalUsernameInput" placeholder="Full Name or Staff ID" style="margin-bottom: 16px;">
         <button class="btn" onclick="saveUserNameFromModal()">Save & Continue</button>
+    </div>
+</div>
+
+<!-- Instructions Modal Dialog -->
+<div id="instructionsModal" class="modal-overlay hidden">
+    <div class="modal-card">
+        <h3 style="margin-top: 0; font-size: 1.2rem; color: var(--primary-dark);">Instructions</h3>
+        <ul class="instructions-list">
+            <li>Fill in all applicable parameters for each equipment and tap <strong>Save Inspection Form</strong> before moving to the next item.</li>
+            <li>Saved entries stay on this device until you tap <strong>Confirm &amp; Finalize Submission</strong> — make sure you have a working internet connection at that point.</li>
+            <li>In text fields, avoid starting an entry with <strong>=, +, -, or @</strong>, as these may be misread as formulas after submission.</li>
+            <li>Keep this device signed in with the correct user name so records are attributed correctly.</li>
+        </ul>
+        <button class="btn" onclick="closeInstructions()">Close</button>
+    </div>
+</div>
+
+<!-- Info Modal Dialog -->
+<div id="infoModal" class="modal-overlay hidden">
+    <div class="modal-card" style="text-align: center;">
+        <div style="width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%; background: var(--primary-color); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.6rem; font-weight: 700;">i</div>
+        <h3 style="margin-top: 0; font-size: 1.15rem; color: var(--primary-dark);">Equipment Checklist App</h3>
+        <p style="font-size: 0.9rem; color: var(--text-color); line-height: 1.6; margin-bottom: 16px;">
+            This app contains checklists for equipment of <strong>Haripur 412 MW CCPP</strong>, EGB PLC Ltd.
+        </p>
+        <div style="background: #F2F7F6; border: 1px solid var(--border-color); border-radius: 6px; padding: 12px 14px; margin-bottom: 18px; text-align: left;">
+            <p style="font-size: 0.82rem; color: var(--secondary-dark); line-height: 1.6; margin: 0;">
+                Your feedback keeps this app improving. If you spot an issue, have a suggestion, or want a feature added or upgraded, please share it with the developer team so we can incorporate it in future updates.
+            </p>
+        </div>
+        <button class="btn" onclick="closeInfo()">Close</button>
+    </div>
+</div>
+
+<!-- Credits Modal Dialog -->
+<div id="creditsModal" class="modal-overlay hidden">
+    <div class="modal-card">
+        <h3 style="margin-top: 0; font-size: 1.15rem; color: var(--primary-dark); text-align: center;">Credits</h3>
+        <div style="font-size: 0.88rem; color: var(--text-color); line-height: 1.7; margin-bottom: 18px;">
+            <p style="margin: 0 0 10px 0;"><strong style="color: var(--secondary-dark);">Idea:</strong><br>Md. Shahidul Islam Mazumder</p>
+            <p style="margin: 0 0 10px 0;"><strong style="color: var(--secondary-dark);">Developer:</strong><br>Md. Shamim Hossain</p>
+            <p style="margin: 0;"><strong style="color: var(--secondary-dark);">Checklist preparation:</strong><br>Md. Shamim Hossain, Md. Samsul Haque, Imtiaz Ur Rahman, Al Jead Sabu</p>
+        </div>
+        <button class="btn" onclick="closeCredits()">Close</button>
     </div>
 </div>
 
@@ -1502,6 +1622,33 @@
         }
     }
 
+    // --- Instructions Modal Functions ---
+    function showInstructions() {
+        document.getElementById('instructionsModal').classList.remove('hidden');
+    }
+
+    function closeInstructions() {
+        document.getElementById('instructionsModal').classList.add('hidden');
+    }
+
+    // --- Info Modal Functions ---
+    function showInfo() {
+        document.getElementById('infoModal').classList.remove('hidden');
+    }
+
+    function closeInfo() {
+        document.getElementById('infoModal').classList.add('hidden');
+    }
+
+    // --- Credits Modal Functions ---
+    function showCredits() {
+        document.getElementById('creditsModal').classList.remove('hidden');
+    }
+
+    function closeCredits() {
+        document.getElementById('creditsModal').classList.add('hidden');
+    }
+
     // --- View Navigation ---
     function hideAllViews() {
         document.getElementById('homeView').classList.add('hidden');
@@ -1519,6 +1666,12 @@
 
     function showMajorAreas() {
         hideAllViews();
+        const searchInput = document.getElementById('globalSearchInput');
+        searchInput.value = '';
+        document.getElementById('globalSearchResults').classList.add('hidden');
+        document.getElementById('globalSearchResults').innerHTML = '';
+        document.getElementById('majorAreaSection').classList.remove('hidden');
+
         const areaList = document.getElementById('majorAreaList');
         areaList.innerHTML = '';
 
@@ -1538,6 +1691,58 @@
         });
 
         document.getElementById('majorAreaView').classList.remove('hidden');
+    }
+
+    function findAreaForEquipment(eqName) {
+        for (const areaName of Object.keys(majorAreas)) {
+            if (majorAreas[areaName].includes(eqName)) {
+                return areaName;
+            }
+        }
+        return null;
+    }
+
+    function handleGlobalSearch() {
+        const query = document.getElementById('globalSearchInput').value.trim().toLowerCase();
+        const resultsContainer = document.getElementById('globalSearchResults');
+        const areaSection = document.getElementById('majorAreaSection');
+
+        if (!query) {
+            resultsContainer.classList.add('hidden');
+            resultsContainer.innerHTML = '';
+            areaSection.classList.remove('hidden');
+            return;
+        }
+
+        areaSection.classList.add('hidden');
+        resultsContainer.classList.remove('hidden');
+        resultsContainer.innerHTML = '';
+
+        const matches = Object.keys(equipmentData).filter(eqName =>
+            eqName.toLowerCase().includes(query)
+        );
+
+        if (matches.length === 0) {
+            resultsContainer.innerHTML = `<p style="text-align: center; color: #888; font-style: italic;">No matching equipment found.</p>`;
+            return;
+        }
+
+        matches.forEach(eqName => {
+            const parentArea = findAreaForEquipment(eqName);
+            const isSaved = localStorage.getItem(eqName) !== null;
+
+            const item = document.createElement('div');
+            item.className = 'list-item';
+            item.innerHTML = `
+                <span>${eqName}${parentArea ? `<br><small style="color:#8AA3A0;">${parentArea}</small>` : ''}</span>
+                <span class="status-badge">${isSaved ? 'Saved' : 'Not Saved'}</span>
+            `;
+            item.onclick = () => {
+                if (parentArea) currentArea = parentArea;
+                openEquipmentForm(eqName);
+            };
+            resultsContainer.appendChild(item);
+        });
     }
 
     function showEquipmentList(areaName) {
