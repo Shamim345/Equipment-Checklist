@@ -247,7 +247,7 @@
         <h1>Equipment Checklist</h1>
         <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">
             User: <strong id="currentUserDisplay">Not set</strong> 
-            (<a href="#" onclick="promptForUsername()" style="color: var(--primary-color);">Change</a>)
+            <span id="changeUsernameWrapper">(<a href="#" id="changeUsernameLink" onclick="promptForUsername()" style="color: var(--primary-color);">Change</a>)</span>
         </p>
         <button class="btn" onclick="showMajorAreas()">Check Equipment</button>
         <button class="btn btn-secondary" onclick="openSavedList()">View & Submit Saved Entries</button>
@@ -304,7 +304,7 @@
 <div id="usernameModal" class="modal-overlay hidden">
     <div class="modal-card">
         <h3 style="margin-top: 0; font-size: 1.2rem; color: #333;">Enter Your Name</h3>
-        <p style="font-size: 0.9rem; color: #666; margin-bottom: 16px;">This name will be attached to all inspection records submitted from this device.</p>
+        <p style="font-size: 0.9rem; color: #666; margin-bottom: 16px;">This name will be attached to all inspection records submitted from this device. Once saved, it cannot be changed.</p>
         <input type="text" id="modalUsernameInput" placeholder="Full Name or Staff ID" style="margin-bottom: 16px;">
         <button class="btn" onclick="saveUserNameFromModal()">Save & Continue</button>
     </div>
@@ -318,7 +318,7 @@
             <li>Fill in all applicable parameters for each equipment and tap <strong>Save Inspection Form</strong> before moving to the next item.</li>
             <li>Saved entries stay on this device until you tap <strong>Confirm &amp; Finalize Submission</strong> — make sure you have a working internet connection at that point.</li>
             <li>In text fields, avoid starting an entry with <strong>=, +, -, or @</strong>, as these may be misread as formulas after submission.</li>
-            <li>Keep this device signed in with the correct user name so records are attributed correctly.</li>
+            <li>Your name can only be set once and cannot be changed afterward, so enter it carefully at first use.</li>
         </ul>
         <button class="btn" onclick="closeInstructions()">Close</button>
     </div>
@@ -1596,10 +1596,17 @@
 
     function updateUsernameDisplay() {
         const username = getStoredUsername();
+        const wrapper = document.getElementById('changeUsernameWrapper');
         document.getElementById('currentUserDisplay').innerText = username ? username : "Not set";
+        // Once a name has been saved, the "Change" link is hidden so it cannot be edited again.
+        wrapper.classList.toggle('hidden', !!username);
     }
 
     function promptForUsername() {
+        // Guard: if a name is already saved, do not allow reopening the name dialog.
+        if (getStoredUsername()) {
+            return;
+        }
         const currentName = getStoredUsername() || '';
         document.getElementById('modalUsernameInput').value = currentName;
         document.getElementById('usernameModal').classList.remove('hidden');
